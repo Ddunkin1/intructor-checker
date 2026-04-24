@@ -1,17 +1,30 @@
 'use client'
 
+import { Suspense } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Home, CalendarDays, Search } from 'lucide-react'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { Home, CalendarDays, Search, LayoutDashboard, ClipboardList, Users } from 'lucide-react'
 
-const TABS = [
+const INSTRUCTOR_TABS = [
   { href: '/dashboard', label: 'Home', icon: Home, match: (p: string) => p === '/dashboard' || p.startsWith('/building') },
   { href: '/my-schedule', label: 'My Day', icon: CalendarDays, match: (p: string) => p === '/my-schedule' },
   { href: '/search', label: 'Search', icon: Search, match: (p: string) => p === '/search' || p.startsWith('/instructor') },
 ]
 
-export function BottomNav() {
+const ADMIN_TABS = [
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, match: (_p: string, tab: string | null) => !tab || tab === 'dashboard' },
+  { href: '/admin?tab=schedule', label: 'Schedule', icon: ClipboardList, match: (_p: string, tab: string | null) => tab === 'schedule' },
+  { href: '/admin?tab=instructors', label: 'Instructors', icon: Users, match: (_p: string, tab: string | null) => tab === 'instructors' },
+]
+
+function NavInner({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const tab = searchParams.get('tab')
+
+  if (pathname === '/login') return null
+
+  const tabs = isAdmin ? ADMIN_TABS : INSTRUCTOR_TABS
 
   return (
     <nav
@@ -19,15 +32,16 @@ export function BottomNav() {
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 6px)' }}
     >
       <div className="flex items-stretch max-w-lg mx-auto">
-        {TABS.map(({ href, label, icon: Icon, match }) => {
-          const active = match(pathname)
+        {tabs.map(({ href, label, icon: Icon, match }) => {
+          const active = isAdmin
+            ? match(pathname, tab)
+            : (match as (p: string) => boolean)(pathname)
           return (
             <Link
-              key={href}
+              key={label}
               href={href}
               className="flex flex-1 flex-col items-center justify-center min-h-[56px] py-1.5 transition-colors gap-0.5"
             >
-              {/* Active pill bar */}
               <span className={[
                 'h-[3px] w-8 rounded-full transition-all duration-200 mb-1',
                 active ? 'bg-gray-900' : 'bg-transparent',
@@ -41,5 +55,13 @@ export function BottomNav() {
         })}
       </div>
     </nav>
+  )
+}
+
+export function BottomNav({ isAdmin = false }: { isAdmin?: boolean }) {
+  return (
+    <Suspense fallback={null}>
+      <NavInner isAdmin={isAdmin} />
+    </Suspense>
   )
 }

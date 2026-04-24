@@ -1,4 +1,7 @@
-import { ALL_DAYS, DayCode, schedule, ScheduleEntry } from '@/lib/data/scheduleData'
+import { redirect } from 'next/navigation'
+import { ALL_DAYS, DayCode, ScheduleEntry } from '@/lib/data/scheduleData'
+import { getEntriesForInstructor } from '@/lib/data/supabaseSchedule'
+import { getUser } from '@/lib/auth/getUser'
 import { formatTime } from '@/lib/utils/timeUtils'
 import { BackButton } from '@/components/BackButton'
 
@@ -15,10 +18,11 @@ export default async function InstructorPage({
 }: {
   params: Promise<{ name: string }>
 }) {
-  const { name } = await params
-  const instructorName = decodeURIComponent(name)
+  const [{ name }, user] = await Promise.all([params, getUser()])
+  if (!user) redirect('/login')
 
-  const myClasses = schedule.filter(e => e.instructor === instructorName)
+  const instructorName = decodeURIComponent(name)
+  const myClasses = await getEntriesForInstructor(instructorName)
 
   const byDay = Object.fromEntries(
     ALL_DAYS.map(({ code }) => [
@@ -38,7 +42,6 @@ export default async function InstructorPage({
     <main className="min-h-screen bg-gray-100">
       <div className="max-w-lg mx-auto px-3 sm:px-4 pt-6 sm:pt-10 pb-24">
 
-        {/* Header */}
         <div className="mb-6 sm:mb-8">
           <BackButton />
           <div className="mt-2">
@@ -56,7 +59,6 @@ export default async function InstructorPage({
           </div>
         </div>
 
-        {/* No classes */}
         {myClasses.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <svg className="w-10 h-10 text-gray-200 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>

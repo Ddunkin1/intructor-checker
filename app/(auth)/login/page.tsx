@@ -2,14 +2,15 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Eye, EyeOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/Button'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -19,17 +20,13 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient()
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         setError(error.message)
       } else {
         router.push('/dashboard')
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred')
     } finally {
       setLoading(false)
@@ -37,66 +34,87 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Instructor Room Checker
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Sign in to your account
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <div className="w-full max-w-sm">
+
+        {/* Header */}
+        <div className="text-center mb-8">
+          <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">
+            Welcome
           </p>
+          <h1 className="text-3xl font-black text-gray-900 leading-tight">
+            Room Checker
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">Sign in to your account</p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div suppressHydrationWarning>
-              <label htmlFor="email" className="sr-only">
-                Email address
+
+        {/* Card */}
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 px-6 py-7">
+          <form onSubmit={handleLogin} className="space-y-4" suppressHydrationWarning>
+            <div>
+              <label htmlFor="email" className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">
+                Email
               </label>
               <input
                 id="email"
                 name="email"
                 type="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
+                autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                suppressHydrationWarning
               />
             </div>
-            <div suppressHydrationWarning>
-              <label htmlFor="password" className="sr-only">
+
+            <div>
+              <label htmlFor="password" className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">
                 Password
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 pr-11 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  suppressHydrationWarning
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
-          </div>
 
-          {error && (
-            <div className="text-red-600 text-sm text-center">
-              {error}
-            </div>
-          )}
+            {error && (
+              <p className="text-xs font-semibold text-red-500 text-center bg-red-50 rounded-xl px-4 py-2">
+                {error}
+              </p>
+            )}
 
-          <div>
-            <Button
+            <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="w-full bg-gray-900 text-white text-sm font-bold py-3.5 rounded-2xl hover:bg-gray-800 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
             >
-              {loading ? 'Signing in...' : 'Sign in'}
-            </Button>
-          </div>
-        </form>
+              {loading ? 'Signing in…' : 'Sign in'}
+            </button>
+          </form>
+        </div>
+
+        <p className="text-center text-xs text-gray-400 mt-5">
+          Contact your administrator to get an account
+        </p>
       </div>
     </div>
   )

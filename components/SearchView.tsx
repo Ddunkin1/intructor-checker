@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Search, X, User, MapPin, BookOpen, ChevronRight } from 'lucide-react'
-import { DayCode, ScheduleEntry, instructors, schedule } from '@/lib/data/scheduleData'
+import { DayCode, ScheduleEntry } from '@/lib/data/scheduleData'
 import { formatTime } from '@/lib/utils/timeUtils'
 
 interface Props {
   todayCode: DayCode | null
+  schedule: ScheduleEntry[]
+  instructors: string[]
 }
 
 function getFloorLabel(room: string): string {
@@ -27,7 +29,7 @@ const SECTION_HEADER = 'text-xs font-semibold uppercase tracking-widest text-gra
 const CARD = 'flex items-center gap-3 bg-white rounded-2xl px-4 py-3.5 shadow-sm border border-gray-100 active:scale-[0.98] transition-transform'
 const ICON_WRAP = 'w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0'
 
-export function SearchView({ todayCode }: Props) {
+export function SearchView({ todayCode, schedule, instructors }: Props) {
   const [query, setQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 

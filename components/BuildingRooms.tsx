@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/Modal'
-import { DayCode, ScheduleEntry, MY_INSTRUCTOR, ALL_DAYS } from '@/lib/data/scheduleData'
+import { DayCode, ScheduleEntry, ALL_DAYS } from '@/lib/data/scheduleData'
 import { formatTime } from '@/lib/utils/timeUtils'
 
 const FLOOR_PILL_LABELS = ['GF', '2F', '3F', '4F']
@@ -30,6 +30,7 @@ export interface FloorData {
 interface Props {
   allDaysFloors: Record<DayCode, FloorData[]>
   building: string
+  myInstructor: string
   todayLabel: string | null
   todayCode: DayCode | null
   defaultFilter: FilterPill
@@ -71,6 +72,7 @@ function buildTimeline(classes: ScheduleEntry[]): TimelineItem[] {
 
 export function BuildingRooms({
   allDaysFloors,
+  myInstructor,
   todayLabel,
   todayCode,
   defaultFilter,
@@ -328,7 +330,7 @@ export function BuildingRooms({
                   )
                 }
 
-                const isOwn = item.entry.instructor === MY_INSTRUCTOR
+                const isOwn = item.entry.instructor === myInstructor
                 const isNow = isToday &&
                   currentTime >= item.entry.startTime &&
                   currentTime < item.entry.endTime

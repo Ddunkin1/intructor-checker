@@ -1,15 +1,34 @@
 import Link from 'next/link'
-import { ChevronRight, BookOpen } from 'lucide-react'
-import { BUILDINGS, getDayCode, getClassesForBuilding, schedule, MY_INSTRUCTOR } from '@/lib/data/scheduleData'
+import { redirect } from 'next/navigation'
+import { ChevronRight, BookOpen, ShieldCheck } from 'lucide-react'
+import { BUILDINGS, getDayCode } from '@/lib/data/scheduleData'
+import { getScheduleEntries } from '@/lib/data/supabaseSchedule'
+import { getUser } from '@/lib/auth/getUser'
 import { SearchBar } from '@/components/SearchBar'
+import { LogoutButton } from '@/components/LogoutButton'
 
-export default function DashboardPage() {
-  const today = getDayCode(new Date())
-  const dateLabel = new Date().toLocaleDateString('en-US', {
+function getGreeting(hour: number): string {
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
+export default async function DashboardPage() {
+  const user = await getUser()
+  if (!user) redirect('/login')
+  if (user.isAdmin) redirect('/admin')
+  // Note: user will still load even if instructor row is missing in DB
+
+  const now = new Date()
+  const today = getDayCode(now)
+  const dateLabel = now.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
   })
+  const greeting = getGreeting(now.getHours())
+
+  const allEntries = await getScheduleEntries()
 
   return (
     <main className="bg-gray-100">
@@ -17,20 +36,38 @@ export default function DashboardPage() {
 
         {/* Header */}
         <div className="mb-5 sm:mb-6">
-          <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">Today</p>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight">
-            Room Checker
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">{dateLabel}</p>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-0.5">
+                {greeting},
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight">
+                  {user.fullName}
+                </h1>
+                {user.isAdmin && (
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                    <ShieldCheck className="w-3 h-3" />
+                    Admin
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-500 mt-0.5">{dateLabel}</p>
+            </div>
+            <LogoutButton />
+          </div>
         </div>
 
-        <SearchBar schedule={schedule}>
+        <SearchBar schedule={allEntries}>
           {/* Building Cards */}
           <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
             {BUILDINGS.map(({ id, label }) => {
-              const todayClasses = today
-                ? getClassesForBuilding(id, today).filter(e => e.instructor === MY_INSTRUCTOR)
-                : []
+              const todayClasses = allEntries.filter(
+                e =>
+                  e.building === id &&
+                  e.instructor === user.fullName &&
+                  (today == null || e.days.includes(today))
+              )
               const hasClasses = todayClasses.length > 0
 
               return (
@@ -40,7 +77,6 @@ export default function DashboardPage() {
                       hasClasses ? 'bg-white border-green-100' : 'bg-white border-gray-100'
                     }`}
                   >
-                    {/* Building identity */}
                     <div
                       className={`flex flex-col items-center justify-center pt-6 sm:pt-8 pb-4 sm:pb-6 px-4 sm:px-6 ${
                         hasClasses ? '' : 'opacity-50'
@@ -68,7 +104,6 @@ export default function DashboardPage() {
                       </span>
                     </div>
 
-                    {/* Class list or empty state */}
                     {hasClasses ? (
                       <div className="mx-3 sm:mx-5 mb-3 sm:mb-4 rounded-2xl bg-gray-50 ring-1 ring-gray-100 overflow-hidden">
                         {todayClasses.map(cls => (
@@ -93,7 +128,6 @@ export default function DashboardPage() {
                       </div>
                     )}
 
-                    {/* Tap hint */}
                     <div className="flex items-center justify-center gap-1 min-h-[44px] pb-1 text-xs text-gray-300 font-medium">
                       <span>View rooms</span>
                       <ChevronRight className="w-3.5 h-3.5" />
@@ -103,8 +137,6 @@ export default function DashboardPage() {
               )
             })}
           </div>
-
-          {/* Footer link */}
         </SearchBar>
       </div>
     </main>

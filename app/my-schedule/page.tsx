@@ -1,16 +1,22 @@
+import { redirect } from 'next/navigation'
 import {
   ALL_DAYS,
   DayCode,
-  MY_INSTRUCTOR,
   ScheduleEntry,
   getDayCode,
-  getClassesForRoom,
-  schedule,
 } from '@/lib/data/scheduleData'
+import { getScheduleEntries } from '@/lib/data/supabaseSchedule'
+import { getUser } from '@/lib/auth/getUser'
 import { MyScheduleView, ClassContext } from '@/components/MyScheduleView'
 
-function getClassContext(entry: ScheduleEntry, dayCode: DayCode): ClassContext {
-  const roomClasses = getClassesForRoom(entry.room, dayCode)
+function getClassContext(
+  entry: ScheduleEntry,
+  dayCode: DayCode,
+  allEntries: ScheduleEntry[]
+): ClassContext {
+  const roomClasses = allEntries
+    .filter(e => e.room === entry.room && e.days.includes(dayCode))
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
   const before = roomClasses.find(
     c => c.id !== entry.id && c.endTime === entry.startTime
   ) ?? null
@@ -20,17 +26,22 @@ function getClassContext(entry: ScheduleEntry, dayCode: DayCode): ClassContext {
   return { entry, before, after }
 }
 
-export default function MySchedulePage() {
+export default async function MySchedulePage() {
+  const user = await getUser()
+  if (!user) redirect('/login')
+
   const now = new Date()
   const todayCode = getDayCode(now)
   const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 
+  const allEntries = await getScheduleEntries()
+
   const allDays = Object.fromEntries(
     ALL_DAYS.map(({ code }) => {
-      const myClasses = schedule
-        .filter(e => e.instructor === MY_INSTRUCTOR && e.days.includes(code))
+      const myClasses = allEntries
+        .filter(e => e.instructor === user.fullName && e.days.includes(code))
         .sort((a, b) => a.startTime.localeCompare(b.startTime))
-      return [code, myClasses.map(entry => getClassContext(entry, code))]
+      return [code, myClasses.map(entry => getClassContext(entry, code, allEntries))]
     })
   ) as Record<DayCode, ClassContext[]>
 
@@ -44,7 +55,7 @@ export default function MySchedulePage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight">
             My Schedule
           </h1>
-          <p className="text-sm text-gray-500 mt-1">{MY_INSTRUCTOR}</p>
+          <p className="text-sm text-gray-500 mt-1">{user.fullName}</p>
         </div>
 
         <MyScheduleView

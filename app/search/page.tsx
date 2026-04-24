@@ -1,8 +1,18 @@
+import { redirect } from 'next/navigation'
 import { getDayCode } from '@/lib/data/scheduleData'
+import { getUser } from '@/lib/auth/getUser'
+import { getScheduleEntries, getInstructors } from '@/lib/data/supabaseSchedule'
 import { SearchView } from '@/components/SearchView'
 
-export default function SearchPage() {
-  const todayCode = getDayCode(new Date())
+export default async function SearchPage() {
+  const user = await getUser()
+  if (!user) redirect('/login')
+
+  const [schedule, instructors, todayCode] = await Promise.all([
+    getScheduleEntries(),
+    getInstructors(),
+    Promise.resolve(getDayCode(new Date())),
+  ])
 
   return (
     <main className="min-h-screen bg-gray-100">
@@ -13,7 +23,7 @@ export default function SearchPage() {
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Search</h1>
         </div>
-        <SearchView todayCode={todayCode} />
+        <SearchView todayCode={todayCode} schedule={schedule} instructors={instructors} />
       </div>
     </main>
   )
