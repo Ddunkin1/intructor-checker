@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from './providers'
 import { BottomNav } from '@/components/BottomNav'
-import { getUser } from '@/lib/auth/getUser'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,13 +19,11 @@ export const metadata: Metadata = {
   description: "Room booking and scheduling system for college instructors",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const user = await getUser()
-
   return (
     <html
       lang="en"
@@ -37,7 +34,7 @@ export default async function RootLayout({
           <div className="pb-20">
             {children}
           </div>
-          <BottomNav isAdmin={user?.isAdmin ?? false} />
+          <BottomNav />
         </Providers>
       </body>
     </html>

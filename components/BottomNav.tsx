@@ -17,13 +17,14 @@ const ADMIN_TABS = [
   { href: '/admin?tab=instructors', label: 'Instructors', icon: Users, match: (_p: string, tab: string | null) => tab === 'instructors' },
 ]
 
-function NavInner({ isAdmin }: { isAdmin: boolean }) {
+function NavInner() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const tab = searchParams.get('tab')
 
   if (pathname === '/login') return null
 
+  const isAdmin = pathname.startsWith('/admin')
   const tabs = isAdmin ? ADMIN_TABS : INSTRUCTOR_TABS
 
   return (
@@ -58,10 +59,10 @@ function NavInner({ isAdmin }: { isAdmin: boolean }) {
   )
 }
 
-export function BottomNav({ isAdmin = false }: { isAdmin?: boolean }) {
+export function BottomNav({ isAdmin: _ }: { isAdmin?: boolean } = {}) {
   return (
     <Suspense fallback={null}>
-      <NavInner isAdmin={isAdmin} />
+      <NavInner />
     </Suspense>
   )
 }

@@ -38,7 +38,7 @@ function buildRoomsForDay(
       return {
         roomNumber: num,
         roomName,
-        hasClasses: realClasses.some(c => c.instructor === myInstructor),
+        hasClasses: classes.some(c => c.instructor === myInstructor),
         classes,
       }
     }),
