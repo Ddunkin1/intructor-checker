@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
     setError('')
@@ -24,6 +24,7 @@ export default function LoginPage() {
       if (error) {
         setError(error.message)
       } else {
+        router.refresh()
         router.push('/dashboard')
       }
     } catch {

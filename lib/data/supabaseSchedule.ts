@@ -26,6 +26,7 @@ export async function getScheduleEntries(): Promise<ScheduleEntry[]> {
       .from('schedule_entries')
       .select('*')
       .order('start_time')
+      .limit(10000)
     if (error) { console.error('[getScheduleEntries]', error.message, error.code); return [] }
     if (!data) return []
     return (data as ScheduleEntryRow[]).map(rowToEntry)
@@ -49,7 +50,7 @@ export async function getEntriesForBuilding(
     if (dayCode) {
       query = query.contains('days', [dayCode])
     }
-    const { data, error } = await query
+    const { data, error } = await query.limit(10000)
     if (error) { console.error('[getEntriesForBuilding]', error.message, error.code); return [] }
     if (!data) return []
     return (data as ScheduleEntryRow[]).map(rowToEntry)

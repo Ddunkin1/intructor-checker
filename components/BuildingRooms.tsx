@@ -73,7 +73,6 @@ function buildTimeline(classes: ScheduleEntry[]): TimelineItem[] {
 export function BuildingRooms({
   allDaysFloors,
   myInstructor,
-  todayLabel,
   todayCode,
   defaultFilter,
   currentTime,
@@ -207,6 +206,24 @@ export function BuildingRooms({
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-3 flex-wrap pb-1">
+        {isToday ? (
+          <>
+            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400"><span className="w-2.5 h-2.5 rounded-full bg-green-400" />In session</span>
+            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400"><span className="w-2.5 h-2.5 rounded-full bg-amber-400" />Starting soon</span>
+            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400"><span className="w-2.5 h-2.5 rounded-full bg-orange-400" />My class</span>
+            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400"><span className="w-2.5 h-2.5 rounded-full bg-gray-300" />Has classes</span>
+          </>
+        ) : (
+          <>
+            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400"><span className="w-2.5 h-2.5 rounded-full bg-orange-400" />My class</span>
+            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400"><span className="w-2.5 h-2.5 rounded-full bg-gray-300" />Has classes</span>
+            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400"><span className="w-2.5 h-2.5 rounded-full bg-gray-100 border border-gray-200" />Free</span>
+          </>
+        )}
       </div>
 
       {/* Room grid */}

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from './providers'
 import { BottomNav } from '@/components/BottomNav'
+import { SidebarNav } from '@/components/SidebarNav'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,12 +30,15 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-gray-100" suppressHydrationWarning>
+      <body className="min-h-full bg-gray-100" suppressHydrationWarning>
         <Providers>
-          <div className="pb-20">
-            {children}
+          <SidebarNav />
+          <div className="lg:pl-60">
+            <div className="pb-20 lg:pb-0">
+              {children}
+            </div>
+            <BottomNav />
           </div>
-          <BottomNav />
         </Providers>
       </body>
     </html>

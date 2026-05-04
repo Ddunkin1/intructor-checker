@@ -1,11 +1,14 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ChevronRight, BookOpen, ShieldCheck } from 'lucide-react'
 import { BUILDINGS, getDayCode } from '@/lib/data/scheduleData'
-import { getScheduleEntries } from '@/lib/data/supabaseSchedule'
+import { getScheduleEntries, getEntriesForInstructor } from '@/lib/data/supabaseSchedule'
 import { getUser } from '@/lib/auth/getUser'
 import { SearchBar } from '@/components/SearchBar'
 import { LogoutButton } from '@/components/LogoutButton'
+import { formatTime } from '@/lib/utils/timeUtils'
 
 function getGreeting(hour: number): string {
   if (hour < 12) return 'Good morning'
@@ -28,11 +31,14 @@ export default async function DashboardPage() {
   })
   const greeting = getGreeting(now.getHours())
 
-  const allEntries = await getScheduleEntries()
+  const [allEntries, myEntries] = await Promise.all([
+    getScheduleEntries(),
+    getEntriesForInstructor(user.fullName),
+  ])
 
   return (
     <main className="bg-gray-100">
-      <div className="max-w-lg mx-auto px-3 sm:px-4 pt-6 sm:pt-10 pb-6">
+      <div className="max-w-lg lg:max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 pt-6 sm:pt-10 pb-6">
 
         {/* Header */}
         <div className="mb-5 sm:mb-6">
@@ -60,12 +66,11 @@ export default async function DashboardPage() {
 
         <SearchBar schedule={allEntries}>
           {/* Building Cards */}
-          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
             {BUILDINGS.map(({ id, label }) => {
-              const todayClasses = allEntries.filter(
+              const todayClasses = myEntries.filter(
                 e =>
                   e.building === id &&
-                  e.instructor === user.fullName &&
                   (today == null || e.days.includes(today))
               )
               const hasClasses = todayClasses.length > 0
@@ -115,7 +120,7 @@ export default async function DashboardPage() {
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-gray-800 truncate">{cls.subject}</p>
                               <p className="text-xs text-gray-400 truncate">
-                                {cls.room} · {cls.startTime}–{cls.endTime}
+                                {cls.room} · {formatTime(cls.startTime)}–{formatTime(cls.endTime)}
                               </p>
                             </div>
                           </div>

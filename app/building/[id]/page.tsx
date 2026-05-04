@@ -81,7 +81,7 @@ export default async function BuildingPage({
 
   return (
     <main className="min-h-screen bg-gray-100">
-      <div className="max-w-lg mx-auto px-3 sm:px-4 pt-6 sm:pt-10 pb-24">
+      <div className="max-w-lg lg:max-w-4xl mx-auto px-3 sm:px-4 lg:px-8 pt-6 sm:pt-10 pb-24 lg:pb-8">
         <div className="mb-5 sm:mb-7">
           <Link
             href="/dashboard"

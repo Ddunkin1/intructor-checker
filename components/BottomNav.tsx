@@ -3,12 +3,13 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { Home, CalendarDays, Search, LayoutDashboard, ClipboardList, Users } from 'lucide-react'
+import { Home, CalendarDays, Search, LayoutDashboard, ClipboardList, Users, UserCircle } from 'lucide-react'
 
 const INSTRUCTOR_TABS = [
-  { href: '/dashboard', label: 'Home', icon: Home, match: (p: string) => p === '/dashboard' || p.startsWith('/building') },
-  { href: '/my-schedule', label: 'My Day', icon: CalendarDays, match: (p: string) => p === '/my-schedule' },
-  { href: '/search', label: 'Search', icon: Search, match: (p: string) => p === '/search' || p.startsWith('/instructor') },
+  { href: '/dashboard',   label: 'Home',    icon: Home,         match: (p: string) => p === '/dashboard' || p.startsWith('/building') },
+  { href: '/my-schedule', label: 'My Day',  icon: CalendarDays, match: (p: string) => p === '/my-schedule' },
+  { href: '/search',      label: 'Search',  icon: Search,       match: (p: string) => p === '/search' || p.startsWith('/instructor') },
+  { href: '/profile',     label: 'Profile', icon: UserCircle,   match: (p: string) => p === '/profile' },
 ]
 
 const ADMIN_TABS = [
@@ -29,7 +30,7 @@ function NavInner() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t border-gray-100"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t border-gray-100"
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 6px)' }}
     >
       <div className="flex items-stretch max-w-lg mx-auto">

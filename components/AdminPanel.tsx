@@ -33,6 +33,7 @@ const TIME_SLOTS = [
 ]
 
 type BuildingFilter = 'all' | Building
+type DayFilter = 'all' | DayCode
 type AdminTab = 'dashboard' | 'schedule' | 'instructors'
 
 interface InstructorRow {
@@ -175,6 +176,7 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
 
   // ── Schedule CRUD local state ─────────────────────────────────────────────
   const [buildingFilter, setBuildingFilter] = useState<BuildingFilter>('all')
+  const [dayFilter, setDayFilter] = useState<DayFilter>('all')
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -251,13 +253,14 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
 
   const filtered = entries.filter(e => {
     const matchBuilding = buildingFilter === 'all' || e.building === buildingFilter
+    const matchDay = dayFilter === 'all' || e.days.includes(dayFilter)
     const q = search.trim().toLowerCase()
     const matchSearch = !q || (
       e.instructor.toLowerCase().includes(q) ||
       e.subject.toLowerCase().includes(q) ||
       e.room.toLowerCase().includes(q)
     )
-    return matchBuilding && matchSearch
+    return matchBuilding && matchDay && matchSearch
   })
 
   const grouped: Record<string, ScheduleEntry[]> = {}
@@ -514,7 +517,7 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <main className="bg-gray-100 min-h-screen">
-      <div className="max-w-lg mx-auto px-3 sm:px-4 pt-6 sm:pt-10 pb-28">
+      <div className="max-w-lg lg:max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 pt-6 sm:pt-10 pb-28 lg:pb-10">
 
         {/* Header */}
         <div className="mb-5 flex items-start justify-between gap-2">
@@ -540,170 +543,180 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
 
         {/* ═══ DASHBOARD TAB ════════════════════════════════════════════════ */}
         {activeTab === 'dashboard' && (
-          <div className="space-y-5">
+          <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start space-y-5 lg:space-y-0">
 
-            {/* Greeting */}
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">
-                {greeting},
-              </p>
-              <p className="text-base text-gray-600">
-                Here's an overview of the current semester schedule.
-              </p>
-            </div>
+            {/* Left column */}
+            <div className="space-y-5">
 
-            {/* Stats */}
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { label: 'Classes', value: entriesLoading ? '–' : entries.length },
-                { label: 'Instructors', value: entriesLoading ? '–' : new Set(entries.map(e => e.instructor)).size },
-                { label: 'Active Today', value: entriesLoading ? '–' : activeTodayCount },
-                { label: 'Buildings', value: 3 },
-              ].map(({ label, value }) => (
-                <div key={label} className="bg-white rounded-2xl px-2 py-3 text-center shadow-sm border border-gray-100">
-                  <p className="text-lg font-black text-gray-900">{value}</p>
-                  <p className="text-[10px] font-semibold text-gray-400 mt-0.5 leading-tight">{label}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Right Now */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
-                <Clock className="w-3.5 h-3.5 text-gray-400" />
-                <p className="text-xs font-bold text-gray-700 uppercase tracking-widest">Right Now</p>
-                <span className="ml-auto text-xs text-gray-400">{formatTime(currentTime)}</span>
+              {/* Greeting */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">
+                  {greeting},
+                </p>
+                <p className="text-base text-gray-600">
+                  Here's an overview of the current semester schedule.
+                </p>
               </div>
-              {entriesLoading ? (
-                <div className="px-4 py-5 text-sm text-gray-400">Loading…</div>
-              ) : activeNow.length === 0 ? (
-                <div className="px-4 py-5 text-sm text-gray-400">No classes in session right now</div>
-              ) : (
-                <div className="divide-y divide-gray-100">
-                  {activeNow.map(e => (
-                    <div key={e.id} className="px-4 py-3 flex items-start gap-3">
-                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{e.room} · {e.subject}</p>
-                        <p className="text-xs text-gray-500 truncate">{e.instructor}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">ends at {formatTime(e.endTime)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
-            {/* Conflicts */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
-                <AlertCircle className="w-3.5 h-3.5 text-gray-400" />
-                <p className="text-xs font-bold text-gray-700 uppercase tracking-widest">Schedule Conflicts</p>
-                {conflicts.length > 0 && (
-                  <span className="ml-auto flex items-center gap-1 text-xs font-bold text-red-600">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                    {conflicts.length} detected
-                  </span>
-                )}
+              {/* Stats */}
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: 'Classes', value: entriesLoading ? '–' : entries.length },
+                  { label: 'Instructors', value: entriesLoading ? '–' : new Set(entries.map(e => e.instructor)).size },
+                  { label: 'Active Today', value: entriesLoading ? '–' : activeTodayCount },
+                  { label: 'Buildings', value: 3 },
+                ].map(({ label, value }) => (
+                  <div key={label} className="bg-white rounded-2xl px-2 py-3 text-center shadow-sm border border-gray-100">
+                    <p className="text-lg font-black text-gray-900">{value}</p>
+                    <p className="text-[10px] font-semibold text-gray-400 mt-0.5 leading-tight">{label}</p>
+                  </div>
+                ))}
               </div>
-              {entriesLoading ? (
-                <div className="px-4 py-5 text-sm text-gray-400">Loading…</div>
-              ) : conflicts.length === 0 ? (
-                <div className="flex items-center gap-2 px-4 py-4">
-                  <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                  <p className="text-sm text-gray-500">No conflicts detected</p>
+
+              {/* Right Now */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+                  <Clock className="w-3.5 h-3.5 text-gray-400" />
+                  <p className="text-xs font-bold text-gray-700 uppercase tracking-widest">Right Now</p>
+                  <span className="ml-auto text-xs text-gray-400">{formatTime(currentTime)}</span>
                 </div>
-              ) : (
-                <div className="divide-y divide-gray-100">
-                  {conflicts.map(({ entry1, entry2 }, idx) => {
-                    const shared = sharedDays(entry1, entry2).map(d => DAY_LABELS[d as DayCode]).join('/')
-                    return (
-                      <div key={idx} className="px-4 py-3">
-                        <div className="flex items-start gap-2">
-                          <span className="mt-0.5 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-gray-800">{entry1.room} · {shared}</p>
-                            <p className="text-xs text-gray-600 mt-0.5">
-                              {entry1.subject} ({formatTime(entry1.startTime)}–{formatTime(entry1.endTime)}){' '}
-                              overlaps with {entry2.subject} ({formatTime(entry2.startTime)}–{formatTime(entry2.endTime)})
-                            </p>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              {entry1.instructor} vs {entry2.instructor}
-                            </p>
-                          </div>
+                {entriesLoading ? (
+                  <div className="px-4 py-5 text-sm text-gray-400">Loading…</div>
+                ) : activeNow.length === 0 ? (
+                  <div className="px-4 py-5 text-sm text-gray-400">No classes in session right now</div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {activeNow.map(e => (
+                      <div key={e.id} className="px-4 py-3 flex items-start gap-3">
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{e.room} · {e.subject}</p>
+                          <p className="text-xs text-gray-500 truncate">{e.instructor}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">ends at {formatTime(e.endTime)}</p>
                         </div>
                       </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Quick Actions */}
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Quick Actions</p>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={openAdd}
-                  className="flex items-center gap-2 bg-white rounded-2xl px-4 py-4 shadow-sm border border-gray-100 text-sm font-semibold text-gray-800 hover:bg-gray-50 active:scale-[0.98] transition-all text-left"
-                >
-                  <span className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
-                    <Plus className="w-4 h-4 text-gray-600" />
-                  </span>
-                  Add Class
-                </button>
-                <button
-                  onClick={openAddInstructor}
-                  className="flex items-center gap-2 bg-white rounded-2xl px-4 py-4 shadow-sm border border-gray-100 text-sm font-semibold text-gray-800 hover:bg-gray-50 active:scale-[0.98] transition-all text-left"
-                >
-                  <span className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
-                    <UserPlus className="w-4 h-4 text-gray-600" />
-                  </span>
-                  Add Instructor
-                </button>
-              </div>
-            </div>
-
-            {/* Semester Management */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
-                <Zap className="w-3.5 h-3.5 text-gray-400" />
-                <p className="text-xs font-bold text-gray-700 uppercase tracking-widest">Settings</p>
-              </div>
-              <div className="px-4 py-4 space-y-4">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">
-                    Current Semester
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={semesterLabel}
-                      onChange={e => setSemesterLabel(e.target.value)}
-                      className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                    />
-                    <button
-                      onClick={saveSemester}
-                      className="px-4 py-2.5 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition-colors shrink-0"
-                    >
-                      {semesterSaving ? 'Saved!' : 'Save'}
-                    </button>
+                    ))}
                   </div>
-                </div>
+                )}
+              </div>
 
-                <div className="pt-2 border-t border-gray-100">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Danger Zone</p>
-                  <p className="text-xs text-gray-400 mb-3">
-                    Permanently delete all schedule entries for the current semester.
-                  </p>
+              {/* Quick Actions */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Quick Actions</p>
+                <div className="grid grid-cols-2 gap-3">
                   <button
-                    onClick={() => { setClearInput(''); setClearConfirmOpen(true) }}
-                    className="w-full py-2.5 rounded-xl border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
+                    onClick={openAdd}
+                    className="flex items-center gap-2 bg-white rounded-2xl px-4 py-4 shadow-sm border border-gray-100 text-sm font-semibold text-gray-800 hover:bg-gray-50 active:scale-[0.98] transition-all text-left"
                   >
-                    Clear All Schedule Entries
+                    <span className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                      <Plus className="w-4 h-4 text-gray-600" />
+                    </span>
+                    Add Class
+                  </button>
+                  <button
+                    onClick={openAddInstructor}
+                    className="flex items-center gap-2 bg-white rounded-2xl px-4 py-4 shadow-sm border border-gray-100 text-sm font-semibold text-gray-800 hover:bg-gray-50 active:scale-[0.98] transition-all text-left"
+                  >
+                    <span className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                      <UserPlus className="w-4 h-4 text-gray-600" />
+                    </span>
+                    Add Instructor
                   </button>
                 </div>
               </div>
+
+            </div>
+
+            {/* Right column */}
+            <div className="space-y-5">
+
+              {/* Conflicts */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+                  <AlertCircle className="w-3.5 h-3.5 text-gray-400" />
+                  <p className="text-xs font-bold text-gray-700 uppercase tracking-widest">Schedule Conflicts</p>
+                  {conflicts.length > 0 && (
+                    <span className="ml-auto flex items-center gap-1 text-xs font-bold text-red-600">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      {conflicts.length} detected
+                    </span>
+                  )}
+                </div>
+                {entriesLoading ? (
+                  <div className="px-4 py-5 text-sm text-gray-400">Loading…</div>
+                ) : conflicts.length === 0 ? (
+                  <div className="flex items-center gap-2 px-4 py-4">
+                    <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                    <p className="text-sm text-gray-500">No conflicts detected</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {conflicts.map(({ entry1, entry2 }, idx) => {
+                      const shared = sharedDays(entry1, entry2).map(d => DAY_LABELS[d as DayCode]).join('/')
+                      return (
+                        <div key={idx} className="px-4 py-3">
+                          <div className="flex items-start gap-2">
+                            <span className="mt-0.5 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-gray-800">{entry1.room} · {shared}</p>
+                              <p className="text-xs text-gray-600 mt-0.5">
+                                {entry1.subject} ({formatTime(entry1.startTime)}–{formatTime(entry1.endTime)}){' '}
+                                overlaps with {entry2.subject} ({formatTime(entry2.startTime)}–{formatTime(entry2.endTime)})
+                              </p>
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                {entry1.instructor} vs {entry2.instructor}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Semester Management */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+                  <Zap className="w-3.5 h-3.5 text-gray-400" />
+                  <p className="text-xs font-bold text-gray-700 uppercase tracking-widest">Settings</p>
+                </div>
+                <div className="px-4 py-4 space-y-4">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">
+                      Current Semester
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={semesterLabel}
+                        onChange={e => setSemesterLabel(e.target.value)}
+                        className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                      />
+                      <button
+                        onClick={saveSemester}
+                        className="px-4 py-2.5 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition-colors shrink-0"
+                      >
+                        {semesterSaving ? 'Saved!' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-100">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Danger Zone</p>
+                    <p className="text-xs text-gray-400 mb-3">
+                      Permanently delete all schedule entries for the current semester.
+                    </p>
+                    <button
+                      onClick={() => { setClearInput(''); setClearConfirmOpen(true) }}
+                      className="w-full py-2.5 rounded-xl border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
+                    >
+                      Clear All Schedule Entries
+                    </button>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
           </div>
@@ -713,6 +726,7 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
         {activeTab === 'schedule' && (
           <>
             <div className="space-y-2 mb-5">
+              {/* Building filter */}
               <div className="bg-white rounded-2xl shadow-sm p-1 flex gap-0.5">
                 {(['all', ...BUILDINGS] as BuildingFilter[]).map(b => (
                   <button
@@ -727,6 +741,36 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
                   </button>
                 ))}
               </div>
+
+              {/* Day filter */}
+              <div className="bg-white rounded-2xl shadow-sm p-1 flex gap-0.5">
+                {([{ code: 'all', label: 'All Days' }, ...ALL_DAYS] as { code: DayFilter; label: string }[]).map(({ code, label }) => {
+                  const count = code === 'all'
+                    ? filtered.length
+                    : entries.filter(e =>
+                        e.days.includes(code as DayCode) &&
+                        (buildingFilter === 'all' || e.building === buildingFilter) &&
+                        (!search.trim() || e.instructor.toLowerCase().includes(search.toLowerCase()) || e.subject.toLowerCase().includes(search.toLowerCase()) || e.room.toLowerCase().includes(search.toLowerCase()))
+                      ).length
+                  return (
+                    <button
+                      key={code}
+                      onClick={() => setDayFilter(code)}
+                      className={[
+                        'flex-1 flex flex-col items-center py-1.5 rounded-xl transition-colors duration-150',
+                        dayFilter === code ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-600',
+                      ].join(' ')}
+                    >
+                      <span className="text-[10px] font-bold leading-tight">{code === 'all' ? 'All' : label}</span>
+                      <span className={['text-[9px] font-semibold leading-tight mt-0.5', dayFilter === code ? 'text-gray-300' : 'text-gray-300'].join(' ')}>
+                        {count}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Search */}
               <div className="relative">
                 <input
                   type="text"
@@ -744,6 +788,15 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
                   </button>
                 )}
               </div>
+
+              {/* Result count */}
+              {!entriesLoading && (
+                <p className="text-xs text-gray-400 px-1">
+                  {filtered.length} {filtered.length === 1 ? 'class' : 'classes'}
+                  {dayFilter !== 'all' && ` on ${ALL_DAYS.find(d => d.code === dayFilter)?.label}`}
+                  {buildingFilter !== 'all' && ` in ${buildingFilter}`}
+                </p>
+              )}
             </div>
 
             {entriesLoading ? (
@@ -760,10 +813,15 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
                 ) : (
                   Object.entries(grouped).map(([building, buildingEntries]) => (
                     <div key={building}>
-                      <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
-                        {building} Building
-                      </p>
-                      <div className="space-y-2">
+                      <div className="flex items-center gap-2 mb-3">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                          {building} Building
+                        </p>
+                        <span className="text-[10px] font-bold text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded-full">
+                          {buildingEntries.length}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                         {buildingEntries.map(entry => (
                           <div key={entry.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3.5">
                             {deleteConfirm === entry.id ? (
@@ -777,15 +835,19 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
                             ) : (
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-baseline gap-2 flex-wrap">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <p className="text-sm font-bold text-gray-900">{entry.subject}</p>
-                                    <p className="text-xs text-gray-400">{entry.section}</p>
+                                    <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">{entry.section}</span>
                                   </div>
                                   {entry.title && <p className="text-xs text-gray-400 mt-0.5 truncate">{entry.title}</p>}
-                                  <p className="text-xs text-gray-500 mt-1">{entry.instructor} · {entry.room}</p>
-                                  <p className="text-xs text-gray-400 mt-0.5">
-                                    {entry.days.join('/')} · {formatTime(entry.startTime)}–{formatTime(entry.endTime)}
-                                  </p>
+                                  <p className="text-xs text-gray-600 mt-1 font-medium">{entry.instructor}</p>
+                                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                    <span className="text-xs text-gray-400">{entry.room}</span>
+                                    <span className="text-gray-200">·</span>
+                                    <span className="text-xs text-gray-400">{entry.days.join('/')}</span>
+                                    <span className="text-gray-200">·</span>
+                                    <span className="text-xs text-gray-400">{formatTime(entry.startTime)}–{formatTime(entry.endTime)}</span>
+                                  </div>
                                 </div>
                                 <div className="flex gap-1.5 shrink-0 mt-0.5">
                                   <button onClick={() => openEdit(entry)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors" aria-label="Edit">
@@ -810,7 +872,7 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
 
         {/* ═══ INSTRUCTORS TAB ══════════════════════════════════════════════ */}
         {activeTab === 'instructors' && (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
             {instructorsLoading ? (
               <div className="flex justify-center py-16">
                 <span className="text-sm text-gray-400">Loading…</span>
@@ -878,7 +940,7 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
       {fabOpen && (
         <div className="fixed inset-0 z-30" onClick={() => setFabOpen(false)} />
       )}
-      <div className="fixed bottom-24 right-4 flex flex-col items-end gap-3 z-40">
+      <div className="fixed bottom-24 lg:bottom-8 right-4 lg:right-8 flex flex-col items-end gap-3 z-40">
         {fabOpen && (
           <>
             <div className="flex items-center gap-2">
