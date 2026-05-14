@@ -39,7 +39,12 @@ interface Props {
 
 type RoomStatus = 'occupied' | 'upcoming' | 'has-class' | 'free'
 
-function getRoomStatus(classes: ScheduleEntry[], currentTime: string, isToday: boolean): RoomStatus {
+function getRoomStatus(
+  classes: ScheduleEntry[],
+  currentTime: string,
+  isToday: boolean,
+  myInstructor: string
+): RoomStatus {
   if (classes.length === 0) return 'free'
   if (!isToday) return 'has-class'
   for (const cls of classes) {
@@ -47,7 +52,9 @@ function getRoomStatus(classes: ScheduleEntry[], currentTime: string, isToday: b
   }
   const [nowH, nowM] = currentTime.split(':').map(Number)
   const nowMin = nowH * 60 + nowM
+  // Only trigger "starting soon" for the logged-in instructor's own classes
   for (const cls of classes) {
+    if (cls.instructor !== myInstructor) continue
     const [ch, cm] = cls.startTime.split(':').map(Number)
     const diff = ch * 60 + cm - nowMin
     if (diff > 0 && diff <= 30) return 'upcoming'
@@ -110,18 +117,26 @@ export function BuildingRooms({
   function getPopupStatus(classes: ScheduleEntry[]) {
     if (!isToday) return null
     if (classes.length === 0) return { dot: 'bg-gray-300', text: 'Free all day' }
-    for (const cls of classes) {
-      if (currentTime >= cls.startTime && currentTime < cls.endTime) {
-        return { dot: 'bg-green-500 animate-pulse', text: `Occupied now · ends ${formatTime(cls.endTime)}` }
-      }
-    }
     const [nowH, nowM] = currentTime.split(':').map(Number)
     const nowMin = nowH * 60 + nowM
     for (const cls of classes) {
+      if (currentTime >= cls.startTime && currentTime < cls.endTime) {
+        const isOwn = cls.instructor === myInstructor
+        return {
+          dot: 'bg-green-500 animate-pulse',
+          text: isOwn
+            ? `Your class in session · ends ${formatTime(cls.endTime)}`
+            : `Occupied now · ends ${formatTime(cls.endTime)}`,
+        }
+      }
+    }
+    // "Starting soon" — only for MY instructor's class
+    for (const cls of classes) {
+      if (cls.instructor !== myInstructor) continue
       const [ch, cm] = cls.startTime.split(':').map(Number)
       const diff = ch * 60 + cm - nowMin
       if (diff > 0 && diff <= 30) {
-        return { dot: 'bg-yellow-400', text: `Free now · next class at ${formatTime(cls.startTime)}` }
+        return { dot: 'bg-amber-400', text: `Your class starts at ${formatTime(cls.startTime)}` }
       }
     }
     const next = classes.find(cls => {
@@ -242,14 +257,14 @@ export function BuildingRooms({
               </p>
               <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5">
                 {floor.rooms.map(room => {
-                  const status = getRoomStatus(room.classes, currentTime, isToday)
+                  const status = getRoomStatus(room.classes, currentTime, isToday, myInstructor)
                   const hasAny = room.classes.length > 0
 
                   const tileStyle = (() => {
                     if (status === 'occupied') return 'bg-green-50 border-green-200 text-green-900 shadow-sm'
                     if (status === 'upcoming') return 'bg-amber-50 border-amber-200 text-amber-900 shadow-sm'
                     if (room.hasClasses) return 'bg-orange-50 border-orange-200 text-orange-900 shadow-sm'
-                    if (hasAny) return 'bg-gray-50 border-gray-200 text-gray-700 shadow-sm'
+                    if (hasAny) return 'bg-white border-gray-300 text-gray-600 shadow-sm'
                     return 'bg-white border-gray-100 text-gray-300'
                   })()
 
@@ -257,7 +272,7 @@ export function BuildingRooms({
                     if (status === 'occupied') return 'bg-green-500 animate-pulse'
                     if (status === 'upcoming') return 'bg-amber-400'
                     if (room.hasClasses) return 'bg-orange-400'
-                    if (hasAny) return 'bg-gray-300'
+                    if (hasAny) return 'bg-gray-400'
                     return 'hidden'
                   })()
 
