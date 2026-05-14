@@ -230,6 +230,7 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
   const [clearInput, setClearInput] = useState('')
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
   const [clearing, setClearing] = useState(false)
+  const [seeding, setSeeding] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('semesterLabel')
@@ -515,6 +516,18 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
     }
   }
 
+  async function handleReseed() {
+    setSeeding(true)
+    try {
+      const res = await fetch('/api/admin/schedule/seed', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) { setFetchError(data.error ?? 'Failed to reset data'); return }
+      loadEntries()
+    } finally {
+      setSeeding(false)
+    }
+  }
+
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -723,6 +736,20 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
                         {semesterSaving ? 'Saved!' : 'Save'}
                       </button>
                     </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-100">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Reset Data</p>
+                    <p className="text-xs text-gray-400 mb-3">
+                      Replace all schedule entries with the official demo dataset (235 conflict-free entries).
+                    </p>
+                    <button
+                      onClick={handleReseed}
+                      disabled={seeding}
+                      className="w-full py-2.5 rounded-xl border border-blue-200 text-blue-600 text-sm font-semibold hover:bg-blue-50 disabled:opacity-50 transition-colors"
+                    >
+                      {seeding ? 'Resetting…' : 'Reset to Demo Data'}
+                    </button>
                   </div>
 
                   <div className="pt-2 border-t border-gray-100">
