@@ -21,8 +21,6 @@ export function findConflicts(entries: ScheduleEntry[]): ConflictPair[] {
 
       if (a.room === b.room) {
         conflicts.push({ entry1: a, entry2: b, type: 'room' })
-      } else if (a.instructor === b.instructor && a.instructor.trim() !== '') {
-        conflicts.push({ entry1: a, entry2: b, type: 'instructor' })
       }
     }
   }
