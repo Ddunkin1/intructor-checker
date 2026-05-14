@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   Dialog,
@@ -113,13 +113,28 @@ export function BuildingRooms({
   const [selectedDay, setSelectedDay] = useState<DayCode>(todayCode ?? 'M')
   const [selected, setSelected] = useState<RoomData | null>(null)
 
+  // Use client's local time (overrides server time to fix timezone mismatch)
+  // Updates every minute so NOW badges stay accurate
+  const [liveTime, setLiveTime] = useState(currentTime)
+  useEffect(() => {
+    function tick() {
+      const now = new Date()
+      setLiveTime(
+        `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+      )
+    }
+    tick()
+    const id = setInterval(tick, 60_000)
+    return () => clearInterval(id)
+  }, [])
+
   const floors = allDaysFloors[selectedDay] ?? []
   const isToday = selectedDay === todayCode
   const dayLabel = ALL_DAYS.find(d => d.code === selectedDay)?.label ?? selectedDay
   const timeline = selected ? buildTimeline(selected.classes) : []
 
   const nowMins = (() => {
-    const [h, m] = currentTime.split(':').map(Number)
+    const [h, m] = liveTime.split(':').map(Number)
     return h * 60 + m
   })()
 
@@ -147,10 +162,10 @@ export function BuildingRooms({
   function getPopupStatus(classes: ScheduleEntry[]) {
     if (!isToday) return null
     if (classes.length === 0) return { dot: 'bg-gray-300', text: 'Free all day' }
-    const [nowH, nowM] = currentTime.split(':').map(Number)
+    const [nowH, nowM] = liveTime.split(':').map(Number)
     const nowMin = nowH * 60 + nowM
     for (const cls of classes) {
-      if (currentTime >= cls.startTime && currentTime < cls.endTime) {
+      if (liveTime >= cls.startTime && liveTime < cls.endTime) {
         const isOwn = cls.instructor === myInstructor
         return {
           dot: 'bg-green-500 animate-pulse',
@@ -288,7 +303,7 @@ export function BuildingRooms({
               </p>
               <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5">
                 {floor.rooms.map(room => {
-                  const status = getRoomStatus(room.classes, currentTime, isToday, myInstructor)
+                  const status = getRoomStatus(room.classes, liveTime, isToday, myInstructor)
 
                   const tileStyle = (() => {
                     if (status === 'my-in-session') return 'bg-green-50 border-green-300 text-green-900 shadow-md ring-1 ring-green-200'
@@ -353,7 +368,7 @@ export function BuildingRooms({
                 {isToday ? `Today — ${dayLabel}` : dayLabel}
               </p>
               {selected?.hasClasses && (() => {
-                const s = getRoomStatus(selected.classes, currentTime, isToday, myInstructor)
+                const s = getRoomStatus(selected.classes, liveTime, isToday, myInstructor)
                 const done = s === 'my-done'
                 return (
                   <>
@@ -402,8 +417,8 @@ export function BuildingRooms({
 
                 const isOwn = item.entry.instructor === myInstructor
                 const isNow = isToday &&
-                  currentTime >= item.entry.startTime &&
-                  currentTime < item.entry.endTime
+                  liveTime >= item.entry.startTime &&
+                  liveTime < item.entry.endTime
 
                 return (
                   <div
