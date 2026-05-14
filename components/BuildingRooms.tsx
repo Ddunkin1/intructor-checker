@@ -93,6 +93,21 @@ export function BuildingRooms({
   const dayLabel = ALL_DAYS.find(d => d.code === selectedDay)?.label ?? selectedDay
   const timeline = selected ? buildTimeline(selected.classes) : []
 
+  const nowMins = (() => {
+    const [h, m] = currentTime.split(':').map(Number)
+    return h * 60 + m
+  })()
+
+  // True if I have a class in this room that hasn't ended yet (upcoming or ongoing)
+  function myClassNotEnded(classes: ScheduleEntry[]): boolean {
+    if (!isToday) return classes.some(c => c.instructor === myInstructor)
+    return classes.some(cls => {
+      if (cls.instructor !== myInstructor) return false
+      const [eh, em] = cls.endTime.split(':').map(Number)
+      return nowMins < eh * 60 + em
+    })
+  }
+
   const visibleFloors = (() => {
     if (filter === 'all') return floors
     if (filter === 'active') {
@@ -259,11 +274,12 @@ export function BuildingRooms({
                 {floor.rooms.map(room => {
                   const status = getRoomStatus(room.classes, currentTime, isToday, myInstructor)
                   const hasAny = room.classes.length > 0
+                  const myActive = myClassNotEnded(room.classes)
 
                   const tileStyle = (() => {
                     if (status === 'occupied') return 'bg-green-50 border-green-200 text-green-900 shadow-sm'
                     if (status === 'upcoming') return 'bg-amber-50 border-amber-200 text-amber-900 shadow-sm'
-                    if (room.hasClasses) return 'bg-orange-50 border-orange-200 text-orange-900 shadow-sm'
+                    if (myActive) return 'bg-orange-50 border-orange-200 text-orange-900 shadow-sm'
                     if (hasAny) return 'bg-white border-gray-300 text-gray-600 shadow-sm'
                     return 'bg-white border-gray-100 text-gray-300'
                   })()
@@ -271,7 +287,7 @@ export function BuildingRooms({
                   const dotStyle = (() => {
                     if (status === 'occupied') return 'bg-green-500 animate-pulse'
                     if (status === 'upcoming') return 'bg-amber-400'
-                    if (room.hasClasses) return 'bg-orange-400'
+                    if (myActive) return 'bg-orange-400'
                     if (hasAny) return 'bg-gray-400'
                     return 'hidden'
                   })()
@@ -318,15 +334,18 @@ export function BuildingRooms({
               <p className="text-xs text-gray-400 font-medium">
                 {isToday ? `Today — ${dayLabel}` : dayLabel}
               </p>
-              {selected?.hasClasses && (
-                <>
-                  <span className="text-gray-200">·</span>
-                  <span className="flex items-center gap-1 text-xs font-semibold text-green-600">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    My class today
-                  </span>
-                </>
-              )}
+              {selected?.hasClasses && (() => {
+                const active = myClassNotEnded(selected.classes)
+                return (
+                  <>
+                    <span className="text-gray-200">·</span>
+                    <span className={`flex items-center gap-1 text-xs font-semibold ${active ? 'text-green-600' : 'text-gray-400'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-green-500' : 'bg-gray-400'}`} />
+                      {active ? 'My class today' : 'My class (done)'}
+                    </span>
+                  </>
+                )
+              })()}
             </div>
 
             {/* Right-now status line */}
