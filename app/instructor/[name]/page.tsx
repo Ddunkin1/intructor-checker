@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { redirect } from 'next/navigation'
 import { ALL_DAYS, DayCode, ScheduleEntry } from '@/lib/data/scheduleData'
 import { getEntriesForInstructor } from '@/lib/data/supabaseSchedule'

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { redirect } from 'next/navigation'
 import { getUser } from '@/lib/auth/getUser'
 import { AdminPanel } from '@/components/AdminPanel'

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { redirect } from 'next/navigation'
 import { getDayCode } from '@/lib/data/scheduleData'
 import { getUser } from '@/lib/auth/getUser'
