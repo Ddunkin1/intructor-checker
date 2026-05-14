@@ -338,7 +338,7 @@ export function BuildingRooms({
                     >
                       <span className={['absolute top-1.5 right-1.5 w-2 h-2 rounded-full', dotStyle].join(' ')} />
                       {room.roomNumber}
-                      {hasAny && (
+                      {room.classes.length > 0 && (
                         <span className={[
                           'text-[9px] font-semibold mt-0.5 opacity-60',
                         ].join(' ')}>
