@@ -9,3 +9,30 @@ html, body {
   background-color: #f3f4f6;
   color: #171717;
 }
+
+/* Pointer cursor on all interactive elements */
+a,
+button,
+[role="button"],
+select,
+label,
+input[type="file"],
+input[type="checkbox"],
+input[type="radio"] {
+  cursor: pointer;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="search"],
+textarea {
+  cursor: text;
+}
+
+button:disabled,
+input:disabled,
+select:disabled {
+  cursor: not-allowed;
+}
