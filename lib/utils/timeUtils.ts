@@ -26,6 +26,19 @@ export function formatTime(time: string): string {
   return `${displayHour}:${minutes} ${ampm}`
 }
 
+export type ClassStatus = 'past' | 'ongoing' | 'upcoming'
+
+export function getClassStatus(startTime: string, endTime: string, now: Date): ClassStatus {
+  const nowMins = now.getHours() * 60 + now.getMinutes()
+  const [sh, sm] = startTime.split(':').map(Number)
+  const [eh, em] = endTime.split(':').map(Number)
+  const startMins = sh * 60 + sm
+  const endMins = eh * 60 + em
+  if (nowMins >= endMins) return 'past'
+  if (nowMins >= startMins) return 'ongoing'
+  return 'upcoming'
+}
+
 /**
  * Get the start of week for a given date (Monday)
  */

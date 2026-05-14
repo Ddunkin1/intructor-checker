@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import {
   Plus, Pencil, Trash2, UserPlus, ShieldCheck,
   AlertCircle, CheckCircle2, Clock, Zap, Eye, EyeOff,
@@ -143,6 +143,7 @@ const DAY_LABELS: Record<DayCode, string> = {
 
 function AdminPanelInner({ fullName }: { fullName: string }) {
   const searchParams = useSearchParams()
+  const router = useRouter()
 
 
   const rawTab = searchParams.get('tab')
@@ -250,6 +251,7 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
 
   const activeTodayCount = entries.filter(e => todayCode && e.days.includes(todayCode)).length
   const conflicts = findConflicts(entries)
+  const conflictIds = new Set(conflicts.flatMap(c => [c.entry1.id, c.entry2.id]))
 
   const filtered = entries.filter(e => {
     const matchBuilding = buildingFilter === 'all' || e.building === buildingFilter
@@ -651,21 +653,42 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
                   </div>
                 ) : (
                   <div className="divide-y divide-gray-100">
-                    {conflicts.map(({ entry1, entry2 }, idx) => {
+                    {conflicts.map(({ entry1, entry2, type }, idx) => {
                       const shared = sharedDays(entry1, entry2).map(d => DAY_LABELS[d as DayCode]).join('/')
                       return (
                         <div key={idx} className="px-4 py-3">
                           <div className="flex items-start gap-2">
-                            <span className="mt-0.5 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                            <span className="mt-1 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-gray-800">{entry1.room} · {shared}</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-xs font-bold text-gray-800">
+                                  {type === 'room' ? entry1.room : entry1.instructor} · {shared}
+                                </p>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${type === 'room' ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'}`}>
+                                  {type === 'room' ? 'Room conflict' : 'Instructor conflict'}
+                                </span>
+                              </div>
                               <p className="text-xs text-gray-600 mt-0.5">
                                 {entry1.subject} ({formatTime(entry1.startTime)}–{formatTime(entry1.endTime)}){' '}
                                 overlaps with {entry2.subject} ({formatTime(entry2.startTime)}–{formatTime(entry2.endTime)})
                               </p>
                               <p className="text-xs text-gray-400 mt-0.5">
-                                {entry1.instructor} vs {entry2.instructor}
+                                {type === 'room' ? `${entry1.instructor} vs ${entry2.instructor}` : `${entry1.room} and ${entry2.room}`}
                               </p>
+                              <div className="flex gap-2 mt-2">
+                                <button
+                                  onClick={() => { router.push('?tab=schedule'); openEdit(entry1) }}
+                                  className="text-[10px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-lg transition-colors"
+                                >
+                                  Edit {entry1.subject}
+                                </button>
+                                <button
+                                  onClick={() => { router.push('?tab=schedule'); openEdit(entry2) }}
+                                  className="text-[10px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-lg transition-colors"
+                                >
+                                  Edit {entry2.subject}
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -822,8 +845,10 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
                         </span>
                       </div>
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                        {buildingEntries.map(entry => (
-                          <div key={entry.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3.5">
+                        {buildingEntries.map(entry => {
+                          const hasConflict = conflictIds.has(entry.id)
+                          return (
+                          <div key={entry.id} className={`rounded-2xl shadow-sm border px-4 py-3.5 ${hasConflict ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100'}`}>
                             {deleteConfirm === entry.id ? (
                               <div className="flex items-center justify-between gap-3">
                                 <p className="text-sm font-semibold text-gray-700">Delete this entry?</p>
@@ -836,21 +861,24 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="text-sm font-bold text-gray-900">{entry.subject}</p>
-                                    <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">{entry.section}</span>
+                                    <p className={`text-sm font-bold ${hasConflict ? 'text-red-800' : 'text-gray-900'}`}>{entry.subject}</p>
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${hasConflict ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>{entry.section}</span>
+                                    {hasConflict && (
+                                      <span className="text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">Conflict</span>
+                                    )}
                                   </div>
-                                  {entry.title && <p className="text-xs text-gray-400 mt-0.5 truncate">{entry.title}</p>}
-                                  <p className="text-xs text-gray-600 mt-1 font-medium">{entry.instructor}</p>
+                                  {entry.title && <p className={`text-xs mt-0.5 truncate ${hasConflict ? 'text-red-400' : 'text-gray-400'}`}>{entry.title}</p>}
+                                  <p className={`text-xs mt-1 font-medium ${hasConflict ? 'text-red-700' : 'text-gray-600'}`}>{entry.instructor}</p>
                                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                    <span className="text-xs text-gray-400">{entry.room}</span>
-                                    <span className="text-gray-200">·</span>
-                                    <span className="text-xs text-gray-400">{entry.days.join('/')}</span>
-                                    <span className="text-gray-200">·</span>
-                                    <span className="text-xs text-gray-400">{formatTime(entry.startTime)}–{formatTime(entry.endTime)}</span>
+                                    <span className={`text-xs ${hasConflict ? 'text-red-400' : 'text-gray-400'}`}>{entry.room}</span>
+                                    <span className={hasConflict ? 'text-red-200' : 'text-gray-200'}>·</span>
+                                    <span className={`text-xs ${hasConflict ? 'text-red-400' : 'text-gray-400'}`}>{entry.days.join('/')}</span>
+                                    <span className={hasConflict ? 'text-red-200' : 'text-gray-200'}>·</span>
+                                    <span className={`text-xs ${hasConflict ? 'text-red-400' : 'text-gray-400'}`}>{formatTime(entry.startTime)}–{formatTime(entry.endTime)}</span>
                                   </div>
                                 </div>
                                 <div className="flex gap-1.5 shrink-0 mt-0.5">
-                                  <button onClick={() => openEdit(entry)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors" aria-label="Edit">
+                                  <button onClick={() => openEdit(entry)} className={`p-1.5 rounded-lg transition-colors ${hasConflict ? 'text-red-400 hover:text-red-700 hover:bg-red-100' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`} aria-label="Edit">
                                     <Pencil className="w-3.5 h-3.5" />
                                   </button>
                                   <button onClick={() => setDeleteConfirm(entry.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" aria-label="Delete">
@@ -860,7 +888,8 @@ function AdminPanelInner({ fullName }: { fullName: string }) {
                               </div>
                             )}
                           </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     </div>
                   ))
