@@ -37,7 +37,16 @@ interface Props {
   currentTime: string
 }
 
-type RoomStatus = 'occupied' | 'upcoming' | 'has-class' | 'free'
+// MY class status always takes priority over general room occupancy.
+// Other instructors' sessions only affect rooms that aren't mine.
+type RoomStatus =
+  | 'my-in-session'  // my class is happening right now
+  | 'my-upcoming'    // my class starts within 30 min
+  | 'my-later'       // my class is later today (>30 min away)
+  | 'my-done'        // I had a class here today but it already ended
+  | 'occupied'       // someone else's class is in session (not my room)
+  | 'has-class'      // other instructor has a class here today (not mine)
+  | 'free'
 
 function getRoomStatus(
   classes: ScheduleEntry[],
@@ -46,18 +55,34 @@ function getRoomStatus(
   myInstructor: string
 ): RoomStatus {
   if (classes.length === 0) return 'free'
-  if (!isToday) return 'has-class'
+
+  const myClasses = classes.filter(c => c.instructor === myInstructor)
+
+  if (!isToday) {
+    return myClasses.length > 0 ? 'my-later' : 'has-class'
+  }
+
+  const [nowH, nowM] = currentTime.split(':').map(Number)
+  const nowMins = nowH * 60 + nowM
+
+  // Check MY classes first — they always win
+  for (const cls of myClasses) {
+    if (currentTime >= cls.startTime && currentTime < cls.endTime) return 'my-in-session'
+  }
+  for (const cls of myClasses) {
+    const [ch, cm] = cls.startTime.split(':').map(Number)
+    const diff = ch * 60 + cm - nowMins
+    if (diff > 0 && diff <= 30) return 'my-upcoming'
+  }
+  if (myClasses.some(cls => {
+    const [ch, cm] = cls.startTime.split(':').map(Number)
+    return ch * 60 + cm > nowMins
+  })) return 'my-later'
+  if (myClasses.length > 0) return 'my-done'
+
+  // No my classes in this room — check other instructors
   for (const cls of classes) {
     if (currentTime >= cls.startTime && currentTime < cls.endTime) return 'occupied'
-  }
-  const [nowH, nowM] = currentTime.split(':').map(Number)
-  const nowMin = nowH * 60 + nowM
-  // Only trigger "starting soon" for the logged-in instructor's own classes
-  for (const cls of classes) {
-    if (cls.instructor !== myInstructor) continue
-    const [ch, cm] = cls.startTime.split(':').map(Number)
-    const diff = ch * 60 + cm - nowMin
-    if (diff > 0 && diff <= 30) return 'upcoming'
   }
   return 'has-class'
 }
@@ -97,16 +122,6 @@ export function BuildingRooms({
     const [h, m] = currentTime.split(':').map(Number)
     return h * 60 + m
   })()
-
-  // True if I have a class in this room that hasn't ended yet (upcoming or ongoing)
-  function myClassNotEnded(classes: ScheduleEntry[]): boolean {
-    if (!isToday) return classes.some(c => c.instructor === myInstructor)
-    return classes.some(cls => {
-      if (cls.instructor !== myInstructor) return false
-      const [eh, em] = cls.endTime.split(':').map(Number)
-      return nowMins < eh * 60 + em
-    })
-  }
 
   const visibleFloors = (() => {
     if (filter === 'all') return floors
@@ -242,9 +257,10 @@ export function BuildingRooms({
       <div className="flex items-center gap-3 flex-wrap pb-1">
         {isToday ? (
           <>
-            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400"><span className="w-2.5 h-2.5 rounded-full bg-green-400" />In session</span>
+            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400"><span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />My class now</span>
             <span className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400"><span className="w-2.5 h-2.5 rounded-full bg-amber-400" />Starting soon</span>
             <span className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400"><span className="w-2.5 h-2.5 rounded-full bg-orange-400" />My class</span>
+            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400"><span className="w-2.5 h-2.5 rounded-full bg-green-400" />In session</span>
             <span className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400"><span className="w-2.5 h-2.5 rounded-full bg-gray-300" />Has classes</span>
           </>
         ) : (
@@ -273,22 +289,24 @@ export function BuildingRooms({
               <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5">
                 {floor.rooms.map(room => {
                   const status = getRoomStatus(room.classes, currentTime, isToday, myInstructor)
-                  const hasAny = room.classes.length > 0
-                  const myActive = myClassNotEnded(room.classes)
 
                   const tileStyle = (() => {
-                    if (status === 'occupied') return 'bg-green-50 border-green-200 text-green-900 shadow-sm'
-                    if (status === 'upcoming') return 'bg-amber-50 border-amber-200 text-amber-900 shadow-sm'
-                    if (myActive) return 'bg-orange-50 border-orange-200 text-orange-900 shadow-sm'
-                    if (hasAny) return 'bg-white border-gray-300 text-gray-600 shadow-sm'
+                    if (status === 'my-in-session') return 'bg-green-50 border-green-300 text-green-900 shadow-md ring-1 ring-green-200'
+                    if (status === 'my-upcoming') return 'bg-amber-50 border-amber-200 text-amber-900 shadow-sm'
+                    if (status === 'my-later') return 'bg-orange-50 border-orange-200 text-orange-900 shadow-sm'
+                    if (status === 'my-done') return 'bg-white border-orange-100 text-gray-400'
+                    if (status === 'occupied') return 'bg-green-50 border-green-200 text-green-800'
+                    if (status === 'has-class') return 'bg-white border-gray-300 text-gray-600'
                     return 'bg-white border-gray-100 text-gray-300'
                   })()
 
                   const dotStyle = (() => {
-                    if (status === 'occupied') return 'bg-green-500 animate-pulse'
-                    if (status === 'upcoming') return 'bg-amber-400'
-                    if (myActive) return 'bg-orange-400'
-                    if (hasAny) return 'bg-gray-400'
+                    if (status === 'my-in-session') return 'bg-green-500 animate-pulse'
+                    if (status === 'my-upcoming') return 'bg-amber-400'
+                    if (status === 'my-later') return 'bg-orange-400'
+                    if (status === 'my-done') return 'bg-orange-200'
+                    if (status === 'occupied') return 'bg-green-400'
+                    if (status === 'has-class') return 'bg-gray-300'
                     return 'hidden'
                   })()
 
@@ -335,13 +353,14 @@ export function BuildingRooms({
                 {isToday ? `Today — ${dayLabel}` : dayLabel}
               </p>
               {selected?.hasClasses && (() => {
-                const active = myClassNotEnded(selected.classes)
+                const s = getRoomStatus(selected.classes, currentTime, isToday, myInstructor)
+                const done = s === 'my-done'
                 return (
                   <>
                     <span className="text-gray-200">·</span>
-                    <span className={`flex items-center gap-1 text-xs font-semibold ${active ? 'text-green-600' : 'text-gray-400'}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-green-500' : 'bg-gray-400'}`} />
-                      {active ? 'My class today' : 'My class (done)'}
+                    <span className={`flex items-center gap-1 text-xs font-semibold ${done ? 'text-gray-400' : 'text-orange-600'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${done ? 'bg-gray-400' : 'bg-orange-400'}`} />
+                      {done ? 'My class (done)' : 'My class today'}
                     </span>
                   </>
                 )
